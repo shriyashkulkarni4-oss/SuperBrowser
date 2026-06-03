@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -8,10 +10,15 @@ from routers import seo, ai, community, context
 
 app = FastAPI(title="SuperBrowser API")
 
-# CORS configuration - allow all origins for development
+def get_allowed_origins() -> list[str]:
+    origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+    return [origin.strip() for origin in origins.split(",") if origin.strip()]
+
+
+# CORS configuration - restrict credentialed requests to configured origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
