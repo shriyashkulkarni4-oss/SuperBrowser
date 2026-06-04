@@ -290,13 +290,14 @@ See [TESTING.md](./TESTING.md) for comprehensive testing guidelines.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md)
+before starting work so your setup, issue claim, branch name, and PR format
+match the project expectations.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+For GSSoC contributions, comment with your proposed approach on the issue and
+wait for assignment before coding. The contributor guide covers backend and
+frontend setup, required `.env` keys, branch naming, PR descriptions, GSSoC
+labels, and code style.
 
 ---
 
