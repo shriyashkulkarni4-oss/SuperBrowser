@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 
 from scrapers.brave import scrape_brave
 
-
 GOOGLE_SEARCH_URL = "https://www.google.com/search"
 STARTPAGE_SEARCH_URL = "https://www.startpage.com/sp/search"
 MAX_RESULTS = 10
@@ -48,7 +47,12 @@ def _is_valid_result_url(url: str) -> bool:
         return False
 
     # Exclude Google-owned internal URLs from result cards.
-    if host.endswith("google.com") or host.endswith("googleadservices.com"):
+    if (
+        host == "google.com"
+        or host.endswith(".google.com")
+        or host == "googleadservices.com"
+        or host.endswith(".googleadservices.com")
+    ):
         return False
 
     return True
@@ -69,7 +73,9 @@ def _extract_google_results(html: str) -> list[dict]:
             continue
 
         h3_elem = result_div.select_one("h3")
-        title = h3_elem.get_text(strip=True) if h3_elem else link_elem.get_text(strip=True)
+        title = (
+            h3_elem.get_text(strip=True) if h3_elem else link_elem.get_text(strip=True)
+        )
 
         snippet_elem = (
             result_div.select_one("div[data-sncf]")
@@ -82,12 +88,14 @@ def _extract_google_results(html: str) -> list[dict]:
         if not title and not result_url:
             continue
 
-        results.append({
-            "title": title,
-            "url": result_url,
-            "snippet": snippet,
-            "source": "google",
-        })
+        results.append(
+            {
+                "title": title,
+                "url": result_url,
+                "snippet": snippet,
+                "source": "google",
+            }
+        )
         seen_urls.add(result_url)
 
         if len(results) >= MAX_RESULTS:
@@ -102,7 +110,9 @@ def _extract_startpage_results(html: str) -> list[dict]:
     seen_urls: set[str] = set()
 
     for result_div in soup.select("div.result"):
-        title_link = result_div.select_one("a.result-title.result-link, a[class*=result-title]")
+        title_link = result_div.select_one(
+            "a.result-title.result-link, a[class*=result-title]"
+        )
         if not title_link:
             continue
 
@@ -114,12 +124,14 @@ def _extract_startpage_results(html: str) -> list[dict]:
         snippet_elem = result_div.select_one("p.description, p[class*=description]")
         snippet = snippet_elem.get_text(" ", strip=True) if snippet_elem else ""
 
-        results.append({
-            "title": title,
-            "url": result_url,
-            "snippet": snippet,
-            "source": "google",
-        })
+        results.append(
+            {
+                "title": title,
+                "url": result_url,
+                "snippet": snippet,
+                "source": "google",
+            }
+        )
         seen_urls.add(result_url)
 
         if len(results) >= MAX_RESULTS:
@@ -154,7 +166,9 @@ async def scrape_google(query: str) -> list[dict]:
                 google_results = _extract_google_results(response.text)
 
             if google_results:
-                print(f"[google] status={google_status} parser=google results={len(google_results)}")
+                print(
+                    f"[google] status={google_status} parser=google results={len(google_results)}"
+                )
                 return google_results
     except (httpx.RequestError, httpx.HTTPStatusError):
         pass
@@ -175,7 +189,9 @@ async def scrape_google(query: str) -> list[dict]:
 
     fallback_results = _extract_startpage_results(fallback_response.text)
     if fallback_results:
-        print(f"[google] status={google_status} parser=startpage results={len(fallback_results)}")
+        print(
+            f"[google] status={google_status} parser=startpage results={len(fallback_results)}"
+        )
         return fallback_results
 
     # Final fallback path: use Brave web scraping and map into Google source shape.
@@ -191,16 +207,20 @@ async def scrape_google(query: str) -> list[dict]:
         if not _is_valid_result_url(result_url) or result_url in seen_urls:
             continue
 
-        bridged_results.append({
-            "title": item.get("title", ""),
-            "url": result_url,
-            "snippet": item.get("snippet", ""),
-            "source": "google",
-        })
+        bridged_results.append(
+            {
+                "title": item.get("title", ""),
+                "url": result_url,
+                "snippet": item.get("snippet", ""),
+                "source": "google",
+            }
+        )
         seen_urls.add(result_url)
 
         if len(bridged_results) >= MAX_RESULTS:
             break
 
-    print(f"[google] status={google_status} parser=brave_bridge results={len(bridged_results)}")
+    print(
+        f"[google] status={google_status} parser=brave_bridge results={len(bridged_results)}"
+    )
     return bridged_results
