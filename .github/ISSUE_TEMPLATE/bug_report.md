@@ -2,7 +2,7 @@
 name: " Bug Report"
 about: Report a bug or issue to help improve SuperBrowser
 title: "[BUG] - Short description of the issue"
-labels: ["gssoc-approved", "bug"]
+labels: bug
 assignees: ""
 ---
 
