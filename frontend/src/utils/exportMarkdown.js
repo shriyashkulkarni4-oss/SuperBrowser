@@ -44,14 +44,23 @@ function formatSources(sources = []) {
 
 function collectCommunitySources(results = {}) {
   return [
-    ...(results.stack_results || []).map(item => ({ ...item, platform: 'Stack Overflow' })),
-    ...(results.hn_results || []).map(item => ({ ...item, platform: 'Hacker News' })),
-    ...(results.devto_results || []).map(item => ({ ...item, platform: 'Dev.to' })),
-    ...(results.reddit_results || []).map(item => ({ ...item, platform: 'Reddit' })),
-  ].map(item => ({
-    title: item.platform ? `${item.platform}: ${asText(item.title, 'Untitled')}` : item.title,
-    url: item.url || item.link || item.hn_link,
-  }))
+    ...(results.stack_results || []).map(item => ({
+      title: `Stack Overflow: ${asText(item.title, 'Untitled')}`,
+      url: item.link || item.url,
+    })),
+    ...(results.hn_results || []).map(item => ({
+      title: `Hacker News: ${asText(item.title, 'Untitled')}`,
+      url: item.hn_link || item.url,
+    })),
+    ...(results.devto_results || []).map(item => ({
+      title: `Dev.to: ${asText(item.title, 'Untitled')}`,
+      url: item.url,
+    })),
+    ...(results.reddit_results || []).map(item => ({
+      title: `Reddit: ${asText(item.title, 'Untitled')}`,
+      url: item.url,
+    })),
+  ]
 }
 
 export function hasMarkdownExportContent(mode, results) {
@@ -91,7 +100,7 @@ export function buildMarkdownExport({ mode, query = '', results = {}, createdAt 
 
 export function getMarkdownExportFilename(mode, query = '', date = new Date()) {
   const datePart = date.toISOString().slice(0, 10)
-  return `superbrowser-${mode || 'export'}-${slugify(query)}-${datePart}.md`
+  return `superbrowser-${slugify(mode || 'export')}-${datePart}.md`
 }
 
 export function downloadMarkdownExport({ mode, query, results }) {
