@@ -83,7 +83,7 @@ export default function App() {
   const [sessionStartedAt] = useState(() => new Date().toISOString())
   const [sessionStatus, setSessionStatus] = useState("starting")
   const [tabsState] = useState(() => {
-    const initialTab = createNewTab()
+    const initialTab = createNewTab(appSessionId)
     return { tabs: [initialTab], activeId: initialTab.id }
   })
   const [tabs, setTabs] = useState(tabsState.tabs)
