@@ -85,7 +85,7 @@ jobs:
             echo "No changes to README."
           else
             git commit -m "update contributor list [skip ci]"
-            git push origin ${{ github.ref_name }}
+            git push origin main
           fi
 
 
