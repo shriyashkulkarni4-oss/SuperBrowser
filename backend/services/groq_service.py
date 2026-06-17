@@ -75,7 +75,8 @@ async def ask_groq(
                 backoff = min(backoff * 2, 30)
                 last_error = e
                 continue
-            return f"Groq API error: {str(e)}"
+            print(f"[groq] HTTPStatusError: {e}")
+            return "Unable to generate a response at the moment."
         except Exception as e:
             last_error = e
             # For other errors, retry with backoff too
@@ -86,4 +87,5 @@ async def ask_groq(
                 continue
             break
 
-    return f"Groq API error after {MAX_RETRIES} retries: {str(last_error)}"
+    print(f"[groq] Failed after {MAX_RETRIES} retries. Last error: {last_error}")
+    return "Unable to generate a response at the moment after multiple attempts."
