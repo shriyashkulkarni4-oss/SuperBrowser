@@ -1,5 +1,7 @@
 # Contributing to SuperBrowser
 
+Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before contributing.
+
 Thank you for contributing to SuperBrowser. This guide explains how to set up the project, propose work, submit pull requests, and follow the expectations for GSSoC contributions.
 
 SuperBrowser combines a FastAPI backend with a React and Electron frontend to provide AI-assisted search, browsing context, and multi-engine search results. Please keep contributions focused, tested, and easy for maintainers to review.
@@ -14,7 +16,6 @@ SuperBrowser combines a FastAPI backend with a React and Electron frontend to pr
 - Be respectful in issue comments, reviews, and maintainer discussions.
 
 ## Before You Start
-
 1. Read the issue description and existing comments.
 2. Check open pull requests to avoid duplicate work.
 3. Comment with a clear implementation approach.
@@ -22,6 +23,7 @@ SuperBrowser combines a FastAPI backend with a React and Electron frontend to pr
 5. Create a branch from the latest main branch.
 
 Maintainers do not assign issues only on a first-come-first-served basis. A strong proposal should describe the files you expect to touch, the design choice, edge cases, and any expected risks.
+
 
 If a maintainer asks you to share the approach by email, use `jeetpandya2006@gmail.com`.
 
@@ -251,10 +253,17 @@ Labels are managed by maintainers. Contributors should not pressure maintainers 
 
 ## Review Process
 
+> ⭐ **Star the repository before your PR can be merged.** Contributors are
+> required to star [SuperBrowser](https://github.com/PandyaJeet/SuperBrowser)
+> before a pull request is merged. A workflow checks this automatically and
+> reports a `star-check` status on your PR — maintainers will not merge a PR
+> from a contributor who has not starred the repo.
+
 1. A maintainer reviews the PR.
 2. If changes are requested, address them in the same branch.
 3. Reply with a short summary of what changed after pushing updates.
-4. Wait for approval and merge.
+4. Make sure you have starred the repository (see the note above).
+5. Wait for approval and merge.
 
 Please do not create repeated status comments. One clear follow-up after addressing feedback is enough.
 

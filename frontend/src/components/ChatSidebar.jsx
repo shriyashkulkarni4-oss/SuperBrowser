@@ -182,7 +182,7 @@ export function ChatSidebar({ tabId, appSessionId, onClose, persona = 'default' 
   }, [showModelSelector])
 
   const handleSend = async () => {
-    if (!inputText.trim() || !currentSessionId) return
+    if (!inputText.trim() || isLoading || !currentSessionId) return
     const textToSend = inputText
     setInputText('')
     setIsLoading(true)
@@ -239,7 +239,9 @@ export function ChatSidebar({ tabId, appSessionId, onClose, persona = 'default' 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      if (!isLoading) {
+        handleSend()
+      }
     }
   }
 
