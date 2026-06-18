@@ -47,7 +47,7 @@ function createNewTab(sessionId = null) {
     browserUrl: "",
     browserTitle: "",
     showChat: false,
-    selectedModel: "llama-3.1-8b-instant",
+    selectedModel: "default",
     lastQuery: ""
   }
 }
@@ -94,7 +94,6 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState(tabsState.activeId)
   const [showHistory, setShowHistory] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
-  const [persona, setPersona] = useState("default")
   const [theme, setTheme] = useState(getInitialTheme)
   const [showContextInfo, setShowContextInfo] = useState(false)
   const [backendStatus, setBackendStatus] = useState(null)
@@ -146,7 +145,7 @@ export default function App() {
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, ...updates } : t))
   }, [])
 
-  const performSearch = useCallback((tabId, tabData, searchPersona = "default") => {
+  const performSearch = useCallback((tabId, tabData) => {
     const endpoints = { seo: `/api/search/seo`, ai: `/api/search/ai`, community: `/api/search/community` }
     const prev = searchControllersRef.current[tabId]
     if (prev) prev.abort()
@@ -162,7 +161,7 @@ export default function App() {
     }
     const onDone = () => { if (searchControllersRef.current[tabId] === controller) delete searchControllersRef.current[tabId] }
     
-    const selectedModel = tabData.selectedModel || "llama-3.1-8b-instant"
+    const selectedModel = tabData.selectedModel || "default"
 
     if (tabData.activeMode === 'ai') {
       const context = contextManager.getAIContext(tabId)
@@ -174,10 +173,10 @@ export default function App() {
           signal: controller.signal, 
           body: JSON.stringify({ 
             query: tabData.query, 
-            persona: searchPersona, 
+            persona: selectedModel, 
             context, 
             region: userRegion,
-            model: selectedModel
+            model: "llama-3.1-8b-instant"
           }) 
         })
           .then(r => r.json()).then(onSuccess).catch(onError).finally(onDone)
@@ -185,16 +184,16 @@ export default function App() {
       }
     }
     let url = `${API_BASE}${endpoints[tabData.activeMode]}?q=${encodeURIComponent(tabData.query)}&session_id=${tabData.sessionId}&gl=${userRegion}`
-    if (tabData.activeMode === 'ai') url += `&persona=${searchPersona}&model=${selectedModel}`
+    if (tabData.activeMode === 'ai') url += `&persona=${selectedModel}&model=llama-3.1-8b-instant`
     fetch(url, { signal: controller.signal }).then(r => r.json()).then(onSuccess).catch(onError).finally(onDone)
   }, [contextManager])
 
-  const handleSearch = useCallback((tabId, searchPersona = "default") => {
+  const handleSearch = useCallback((tabId) => {
     setTabs(currentTabs => {
       const tab = currentTabs.find(t => t.id === tabId)
       if (!tab?.query.trim()) return currentTabs
       contextManager.addQuery(tabId, tab.sessionId, tab.query, tab.activeMode)
-      performSearch(tabId, tab, searchPersona)
+      performSearch(tabId, tab)
       return currentTabs.map(t => {
         if (t.id !== tabId) return t
         return { 
@@ -223,13 +222,13 @@ export default function App() {
       const tab = currentTabs.find(t => t.id === tabId)
       if (!tab || !tab.lastQuery) return currentTabs
       const updatedTab = { ...tab, query: tab.lastQuery }
-      performSearch(tabId, updatedTab, persona)
+      performSearch(tabId, updatedTab)
       return currentTabs.map(t => {
         if (t.id !== tabId) return t
         return { ...t, query: t.lastQuery, loading: true, error: null }
       })
     })
-  }, [performSearch, persona])
+  }, [performSearch])
 
   const handleModeChange = useCallback((mode) => {
     setTabs(currentTabs => {
@@ -238,12 +237,12 @@ export default function App() {
       const shouldSearch = tab.query && tab.results
       const updatedTab = { ...tab, activeMode: mode }
       if (shouldSearch) {
-        performSearch(activeTabId, updatedTab, persona)
+        performSearch(activeTabId, updatedTab)
         return currentTabs.map(t => { if (t.id !== activeTabId) return t; return { ...updatedTab, loading: true, error: null, history: [...t.history, { query: t.query, mode }].slice(-10) } })
       }
       return currentTabs.map(t => t.id === activeTabId ? updatedTab : t)
     })
-  }, [activeTabId, performSearch, persona])
+  }, [activeTabId, performSearch])
 
   function handleAddTab() {
     console.log('handleAddTab called, appSessionId:', appSessionId)
@@ -264,7 +263,7 @@ export default function App() {
     const nTabs = tabs.filter(t => t.id !== tabId); setTabs(nTabs)
     if (tabId === activeTabId) setActiveTabId(nTabs[Math.max(0, tabs.findIndex(t => t.id === tabId) - 1)].id)
   }
-  function handleHistoryClick(item) { updateTab(activeTabId, { query: item.query, activeMode: item.mode }); setTimeout(() => handleSearch(activeTabId, persona), 0) }
+  function handleHistoryClick(item) { updateTab(activeTabId, { query: item.query, activeMode: item.mode }); setTimeout(() => handleSearch(activeTabId), 0) }
   function openInAppUrl(url, title = "Web Page") {
     if (!url) return
     const bt = createNewTab(appSessionId); bt.browserUrl = url; bt.browserTitle = title; bt.title = (title || "Web").slice(0, 25); bt.query = url
@@ -313,14 +312,14 @@ export default function App() {
             <div className="w-full max-w-2xl mb-8">
               <div className="pill-search flex items-center px-6 py-4 w-full cursor-text relative backdrop-blur-sm" style={{ background: 'var(--surface-translucent)' }} onClick={() => document.getElementById('search-input-home')?.focus()}>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); handleSearch(activeTabId, persona) }} 
+                  onClick={(e) => { e.stopPropagation(); handleSearch(activeTabId) }} 
                   className="text-[var(--text-secondary)] hover:text-[var(--action-primary)] transition-colors shrink-0"
                 >
                   <SearchIcon />
                 </button>
                 <input id="search-input-home" type="text" value={activeTab?.query || ''} 
                   onChange={(e) => updateTab(activeTabId, { query: e.target.value })} 
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch(activeTabId, persona)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch(activeTabId)}
                   placeholder="Enter your search..."
                   className="flex-1 ml-4 outline-none text-xl bg-transparent text-[var(--text-primary)]"
                   style={{ letterSpacing: '-0.01em' }} />
@@ -344,7 +343,7 @@ export default function App() {
                    if (activeTab?.history && activeTab.history.length > 1) {
                      const prev = activeTab.history[activeTab.history.length - 2];
                      updateTab(activeTabId, { query: prev.query, activeMode: prev.mode, history: activeTab.history.slice(0, -1) });
-                     setTimeout(() => handleSearch(activeTabId, persona), 0);
+                     setTimeout(() => handleSearch(activeTabId), 0);
                    } else {
                      goHome();
                    }
@@ -354,7 +353,7 @@ export default function App() {
                  <button disabled className="p-2 flex items-center justify-center rounded-full text-[var(--text-secondary)] opacity-30 cursor-not-allowed transition-colors" title="Forward">
                    <ChevronRightIcon />
                  </button>
-                 <button onClick={() => { if (activeTab?.query) handleSearch(activeTabId, persona) }} className="p-2 flex items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors" title="Reload">
+                 <button onClick={() => { if (activeTab?.query) handleSearch(activeTabId) }} className="p-2 flex items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors" title="Reload">
                    <RefreshIcon />
                  </button>
                  <button onClick={goHome} className="p-2 flex items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors" title="Home">
@@ -366,7 +365,7 @@ export default function App() {
                   {activeTab?.loading ? <div className="w-[18px] h-[18px] rounded-full border-2 border-[var(--border-color)] border-t-[var(--action-primary)] animate-spin" /> : <span className="text-[var(--text-tertiary)]"><SearchIcon /></span>}
                   <input type="text" value={activeTab?.query || ''} 
                     onChange={(e) => updateTab(activeTabId, { query: e.target.value })} 
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch(activeTabId, persona)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch(activeTabId)}
                     placeholder="Search..."
                     className="flex-1 ml-3 outline-none text-base bg-transparent text-[var(--text-primary)]" />
                   {activeTab?.loading ? (
@@ -378,7 +377,7 @@ export default function App() {
                     </button>
                   ) : (
                     <button 
-                      onClick={() => handleSearch(activeTabId, persona)} 
+                      onClick={() => handleSearch(activeTabId)} 
                       disabled={!activeTab?.query?.trim()}
                       className="ml-2 px-4 py-1.5 rounded-full bg-[var(--action-primary)] text-white text-sm font-medium hover:bg-[var(--action-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -406,15 +405,12 @@ export default function App() {
                <div className="flex-1 overflow-auto p-6 md:p-10 max-w-5xl mx-auto">
                  {activeTab?.error && <div className="text-red-700 border border-red-200 bg-red-50 p-4 rounded-xl mb-6 text-sm max-w-4xl mx-auto">{activeTab.error}</div>}
                  
-                 {/* AI Persona Bar inside results area for cleaner header */}
+                 {/* AI Options Bar inside results area for cleaner header */}
                  {activeTab?.activeMode === 'ai' && (
                     <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-sm font-medium text-[var(--text-secondary)]">Persona:</span>
-                        <PersonaDropdown value={persona} onChange={setPersona} personas={PERSONAS} />
-                        
-                        <span className="text-sm font-medium text-[var(--text-secondary)] ml-3">Model:</span>
-                        <ModelDropdown value={activeTab?.selectedModel || "llama-3.1-8b-instant"} onChange={(model) => updateTab(activeTabId, { selectedModel: model })} />
+                        <span className="text-sm font-medium text-[var(--text-secondary)]">Model:</span>
+                        <ModelDropdown value={activeTab?.selectedModel || "default"} onChange={(model) => updateTab(activeTabId, { selectedModel: model })} />
                         
                         {activeTab?.results && (
                           <button 
@@ -442,7 +438,7 @@ export default function App() {
                    tabId={activeTabId} 
                    appSessionId={activeTab.sessionId} 
                    onClose={() => updateTab(activeTabId, { showChat: false })}
-                   persona={persona}
+                   persona={activeTab?.selectedModel || "default"}
                  />
                )}
                
@@ -675,11 +671,11 @@ function PersonaDropdown({ value, onChange, personas }) {
 
 
 const MODELS = [
-  { id: "llama-3.1-8b-instant",     name: "Llama 3.1 8B",       desc: "Fast & efficient" },
-  { id: "llama-3.3-70b-versatile",   name: "Llama 3.3 70B",     desc: "Most capable, best analysis" },
-  { id: "mixtral-8x7b-32768",       name: "Mixtral 8x7B",      desc: "Large context" },
-  { id: "gemma2-9b-it",             name: "Gemma 2 9B",        desc: "Google instruction-tuned" },
-  { id: "llama-3.1-70b-versatile",   name: "Llama 3.1 70B",     desc: "Detailed responses" }
+  { id: "default",    name: "Llama 3.1 8B (Default)", desc: "Raw Groq — no persona" },
+  { id: "chatgpt",    name: "ChatGPT (GPT-4o)",       desc: "Helpful, concise, friendly & practical" },
+  { id: "gemini",     name: "Gemini 1.5 Pro",         desc: "Analytical & connect ideas broadly" },
+  { id: "claude",     name: "Claude 3.5 Sonnet",      desc: "Nuanced, careful & detailed analysis" },
+  { id: "perplexity", name: "Perplexity AI",          desc: "Factual, search-style & cited" }
 ]
 
 function ModelDropdown({ value, onChange }) {
@@ -725,7 +721,7 @@ function ContextWindow({ show, onClose, tabId, sessionId, contextManager }) {
   const [chatMessages, setChatMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [models, setModels] = useState([])
-  const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant')
+  const [selectedModel, setSelectedModel] = useState('default')
   const [showModelSelector, setShowModelSelector] = useState(false)
   const modelSelectorRef = useRef(null)
 
@@ -737,7 +733,7 @@ function ContextWindow({ show, onClose, tabId, sessionId, contextManager }) {
         .then(data => {
           if (data.models) {
             setModels(data.models)
-            setSelectedModel(data.default || 'llama-3.1-8b-instant')
+            setSelectedModel(data.default || 'default')
           }
         })
         .catch(() => {})
@@ -759,7 +755,7 @@ function ContextWindow({ show, onClose, tabId, sessionId, contextManager }) {
 
   if (!show) return null
 
-  const currentModel = models.find(m => m.id === selectedModel) || { name: 'Llama 3.1 8B', id: selectedModel }
+  const currentModel = models.find(m => m.id === selectedModel) || { name: 'Llama 3.1 8B (Default)', id: selectedModel }
 
   const handleSend = async (text, modelId) => {
     // Add user message immediately
