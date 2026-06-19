@@ -473,6 +473,12 @@ function registerIpcHandlers() {
       mainWindow.focus();
     }
     return { ok: true };
+    });
+    ipcMain.on('open-new-window', () => {
+  createMainWindow();
+});
+ipcMain.on('open-incognito-window', () => {
+    createIncognitoWindow();
   });
 }
 
@@ -498,6 +504,29 @@ function createMainWindow() {
     },
   });
   mainWindow = win;
+  function createIncognitoWindow() {
+  const settings = readSettings();
+  const bounds = settings.windowBounds || {};
+  
+  const win = new BrowserWindow({
+    width: bounds.width || 1280,
+    height: bounds.height || 800,
+    x: Number.isInteger(bounds.x) ? bounds.x : undefined,
+    y: Number.isInteger(bounds.y) ? bounds.y : undefined,
+    minWidth: 1000,
+    webPreferences: {
+      partition: 'incognito_session', // Forces private, in-memory isolation
+      preload: path.join(__dirname, 'preload.cjs'), // Matches your file explorer!
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  if (isDev) {
+    win.loadURL(process.env.VITE_DEV_SERVER_URL); // Loads the frontend in development
+  } else {
+    win.loadFile(path.join(__dirname, '../dist/index.html')); // Loads compiled frontend in production
+  }
+}
 
   if (isDev) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL);
