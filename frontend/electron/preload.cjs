@@ -38,4 +38,17 @@ contextBridge.exposeInMainWorld("superBrowserDesktop", {
       return () => ipcRenderer.removeListener("deep-link", handler);
     },
   },
+  blocking: {
+    getStats: (hostname) => safeInvoke("blocking:get-stats", { hostname }),
+    getSettings: () => safeInvoke("blocking:get-settings"),
+    setDomainEnabled: (hostname, enabled) =>
+      safeInvoke("blocking:set-domain-enabled", { hostname, enabled }),
+    toggle: (type) => safeInvoke("blocking:toggle", { type }),
+    onStatsUpdate: (callback) => {
+      const handler = (_event, stats) => callback(stats);
+      ipcRenderer.on("blocking:stats-update", handler);
+      return () =>
+        ipcRenderer.removeListener("blocking:stats-update", handler);
+    },
+  },
 });

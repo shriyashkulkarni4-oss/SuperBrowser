@@ -13,6 +13,17 @@ const {
   nativeImage,
   Notification,
 } = require("electron");
+const {
+  initBlocker,
+  setMainWindow: setBlockerMainWindow,
+  getBlockedStats,
+  resetStats,
+  getBlockerSettings,
+  toggleBlocking,
+  setDomainEnabled,
+  isWhitelisted,
+  getCosmeticFilters,
+} = require("./blocker.cjs");
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 const DEFAULT_BACKEND_PORT = 8000;
@@ -480,6 +491,28 @@ function registerIpcHandlers() {
 ipcMain.on('open-incognito-window', () => {
     createIncognitoWindow();
   });
+
+  // ── Blocking / Shields IPC handlers ──────────────────────────
+  ipcMain.handle("blocking:get-stats", (_, { hostname }) => {
+    return getBlockedStats(hostname);
+  });
+
+  ipcMain.handle("blocking:get-settings", () => {
+    return getBlockerSettings();
+  });
+
+  ipcMain.handle("blocking:set-domain-enabled", (_, { hostname, enabled }) => {
+    if (typeof hostname !== "string") throw new Error("hostname must be a string");
+    setDomainEnabled(hostname, enabled);
+    return { ok: true };
+  });
+
+  ipcMain.handle("blocking:toggle", (_, { type }) => {
+    if (type !== "ads" && type !== "trackers") {
+      throw new Error('type must be "ads" or "trackers"');
+    }
+    return toggleBlocking(type);
+  });
 }
 
 function createMainWindow() {
@@ -557,12 +590,26 @@ function createMainWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   logEvent("info", "App starting", { isDev });
   app.setAsDefaultProtocolClient("superbrowser");
   createAppMenu();
   createTray();
   registerIpcHandlers();
+
+  // Initialize ad/tracker blocker before window creation
+  try {
+    await initBlocker({
+      readSettings,
+      writeSettings,
+      logEvent,
+      getMainWindow: () => mainWindow,
+    });
+    logEvent("info", "Ad/tracker blocker initialized");
+  } catch (err) {
+    logEvent("error", "Blocker init failed", { error: String(err.message || err) });
+  }
+
   startBackend()
     .catch(async (error) => {
       logEvent("error", "Backend startup failed", { error: String(error.message || error) });
@@ -577,6 +624,8 @@ app.whenReady().then(() => {
     })
     .finally(() => {
       createMainWindow();
+      // Pass window ref to blocker for IPC stats push
+      if (mainWindow) setBlockerMainWindow(mainWindow);
       if (backendStatus.running) {
         showNotification("SuperBrowser", "Backend connected");
         logEvent("info", "Backend connected", { url: backendBaseUrl, pid: backendStatus.pid });
@@ -621,6 +670,7 @@ app.on("before-quit", () => {
 });
 
 // SEC-02: Enforce scheme policy for all webview content at the process level
+// Also injects cosmetic filter CSS for ad element hiding (Layer 2)
 app.on('web-contents-created', (_, contents) => {
   if (contents.getType() === 'webview') {
     // Block non-http(s) navigations at the Electron process level
@@ -641,6 +691,27 @@ app.on('web-contents-created', (_, contents) => {
     contents.setWindowOpenHandler(({ url }) => {
       console.warn('[SuperBrowser][main] Blocked popup window to:', url)
       return { action: 'deny' }
+    })
+
+    // Layer 2: Inject cosmetic filter CSS to hide ad-shaped DOM elements
+    contents.on('dom-ready', () => {
+      try {
+        const pageUrl = contents.getURL()
+        if (!pageUrl || (!pageUrl.startsWith('http://') && !pageUrl.startsWith('https://'))) return
+
+        const hostname = new URL(pageUrl).hostname
+        if (isWhitelisted(hostname)) return
+
+        const cosmetics = getCosmeticFilters(pageUrl)
+        if (cosmetics.styles) {
+          contents.insertCSS(cosmetics.styles).catch(() => {})
+        }
+        if (cosmetics.scripts) {
+          contents.executeJavaScript(cosmetics.scripts).catch(() => {})
+        }
+      } catch (err) {
+        logEvent('warn', 'Cosmetic filter injection failed', { error: String(err) })
+      }
     })
   }
 })

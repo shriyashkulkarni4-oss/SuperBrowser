@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useCallback, useEffect, useRef } from 'react'
+import { Suspense, lazy, useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useContextManager } from './useContextManager'
 import { getApiBase } from './config/apiBase'
 
@@ -7,6 +7,7 @@ const LazyBackgroundOrb = lazy(() => import('./components/BackgroundOrb'))
 import { ContinuousPaginationDemo } from './components/ContinuousPagination'
 import { AiInput } from './components/AiInput'
 import { ProductCarousel } from './components/ProductCarousel'
+import { ShieldsPanel } from './components/ShieldsPanel'
 
 const PERSONAS = [
   { id: "default", label: "Default", desc: "Raw Groq" },
@@ -113,7 +114,7 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState(tabsState.activeId)
   const [showHistory, setShowHistory] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
-  const [theme, setTheme] = useState(getInitialTheme)
+
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
   const [showContextInfo, setShowContextInfo] = useState(false)
@@ -1004,6 +1005,15 @@ function BackendStatusBanner() { return null }
 function BrowserPanel({ url, title, onClose }) {
   const webviewRef = useRef(null)
 
+  // Extract hostname for shields
+  const hostname = useMemo(() => {
+    try {
+      return new URL(url).hostname
+    } catch {
+      return ''
+    }
+  }, [url])
+
   // SEC-02: Block non-http(s) navigations inside the webview
   useEffect(() => {
     const webview = webviewRef.current
@@ -1035,6 +1045,7 @@ function BrowserPanel({ url, title, onClose }) {
           <button onClick={onClose} className="p-1.5 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-black transition-colors" title="Back"><ChevronLeftIcon /></button>
           <button onClick={reloadWebview} className="p-1.5 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors" title="Reload"><RefreshIcon /></button>
         </div>
+        <ShieldsPanel hostname={hostname} onReload={reloadWebview} />
         <input value={url} readOnly className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border-color)] text-sm rounded-lg px-3 py-1.5 outline-none text-[var(--text-secondary)]" />
       </div>
       {/* SEC-02: allowpopups removed; popups are blocked at process level in main.cjs */}

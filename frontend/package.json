@@ -21,8 +21,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ghostery/adblocker-electron": "^2.18.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "cross-fetch": "^4.1.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
